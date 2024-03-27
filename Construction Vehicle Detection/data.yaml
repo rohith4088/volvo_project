@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 8
+names: ['Bulldozer', 'Dump Truck', 'Excavator', 'Grader', 'Loader', 'Mixer Truck', 'Mobile Crane', 'Roller']
+
+roboflow:
+  workspace: capstone-lkzgq
+  project: construction-vehicle-detection-pxc7c
+  version: 2
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/capstone-lkzgq/construction-vehicle-detection-pxc7c/dataset/2
