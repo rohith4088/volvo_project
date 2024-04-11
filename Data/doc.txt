@@ -1,0 +1,14 @@
+Activity Labels contains .txt files for each piece of construction equipment in each video.
+Format: [frame on which action starts] [frame on which it ends] [action type]
+Third column legend:
+0 = Idle, 1 = Swing Bucket, 2 = Load Bucket, 3 = Dump, 4 = Move
+
+
+DetectionTrackingAnnotations contains .xml files for each vid detailing bounding boxes and 
+ids (for tracking)
+Format: 
+<object> = one piece of equipment
+    <t> = frame
+    <x>,<y> = coordinates
+    
+video_frames contains all video frames.
