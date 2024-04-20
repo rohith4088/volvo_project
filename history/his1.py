@@ -6,7 +6,7 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
 from sklearn.model_selection import train_test_split
 import xml.etree.ElementTree as ET
-import memmap
+#from memory_profiler import profile
 
 # Preprocessing functions
 def resize_image(image, size=(224, 224)):
@@ -81,10 +81,11 @@ def preprocess_video_frames(directory, size=(224, 224), augment=False):
                 frames[video_id].append(image)
     return frames
 
-def preprocess_and_yield_images(frames, activity_labels, video_ids):
-    for video_id in video_ids:
-        for frame, label in zip(frames[video_id], [activity_labels[video_id]] * len(frames[video_id])):
-            yield frame, label
+def split_dataset(images, labels, test_size=0.2):
+    if images is None or labels is None:
+        print("Dataset is empty. Cannot split.")
+        return None, None, None, None
+    return train_test_split(images, labels, test_size=test_size, random_state=42)
 
 # Model creation and training functions
 def create_activity_recognition_model(input_shape=(224, 224, 3), num_classes=5):
@@ -118,6 +119,8 @@ def evaluate_model(model, val_images, val_labels):
     print(f"Validation Loss: {loss}, Validation Accuracy: {accuracy}")
 
 # Main script
+#file_log = open("memory_profiler2.log","w+")
+#@profile(stream = file_log)
 def main():
     # Preprocess the dataset
     activity_labels = parse_activity_labels('/Users/rohithr/Desktop/volvo_project/Data/Labels/104154')
@@ -133,36 +136,44 @@ def main():
     print("Video frames preprocessed.")
     print(frames.keys())
 
-    # Get the common video IDs
+    # Create lists to store images and labels
     video_ids = set(frames.keys()) & set(activity_labels.keys())
     print(video_ids)
+    
+    all_images = []
+    all_labels = []
 
-    # Create memory-mapped files for images and labels
-    num_images = sum(len(frames[video_id]) for video_id in video_ids)
-    image_memmap = memmap.open('images.dat', mode='w+', dtype=np.float32, shape=(num_images, 224, 224, 3))
-    label_memmap = memmap.open('labels.dat', mode='w+', dtype=np.object)
+    for video_id in video_ids:
+        for frame, label in zip(frames[video_id], [activity_labels[video_id]] * len(frames[video_id])):
+            all_images.append(frame)
+            all_labels.append(label)
+    print(len(all_images))
+    print(len(all_labels))
 
-    # Store images and labels in memory-mapped files
-    image_index = 0
-    for images, labels in preprocess_and_yield_images(frames, activity_labels, video_ids):
-        image_memmap[image_index] = images
-        label_memmap[image_index] = labels
-        image_index += 1
+    # Convert to NumPy arrays
+    all_images = np.array(all_images)
+    print(all_images.shape)
+    all_labels = np.array(all_labels)
+    print(all_labels.shape)
 
-    # Split into training and validation sets
-    train_images, val_images, train_labels, val_labels = split_dataset(image_memmap, label_memmap, test_size=0.2)
+    # Check if dataset is not empty
+    if len(all_images) > 0 and len(all_labels) > 0:
+        # Split into training and validation sets
+        train_images, val_images, train_labels, val_labels = split_dataset(all_images, all_labels)
 
-    # Create the model
-    model = create_activity_recognition_model()
+        # Create the model
+        model = create_activity_recognition_model()
 
-    # Train the model
-    history = train_activity_recognition_model(model, train_images, train_labels, val_images, val_labels, epochs=10, batch_size=32)
-    if history is None:
-        print("Failed to train the model. Exiting.")
-        exit(1)
+        # Train the model
+        history = train_activity_recognition_model(model, train_images, train_labels, val_images, val_labels, epochs=10, batch_size=32)
+        if history is None:
+            print("Failed to train the model. Exiting.")
+            exit(1)
 
-    # Evaluate the model
-    evaluate_model(model, val_images, val_labels)
+        # Evaluate the model
+        evaluate_model(model, val_images, val_labels)
+    else:
+        print("Dataset is empty. Cannot proceed with training and evaluation.")
 
-    # Clean up memory-mapped files
-    image_memmap.close()
+if __name__ == "__main__":
+    main()
